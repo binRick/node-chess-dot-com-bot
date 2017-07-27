@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/binRick/node-chess-dot-com-bot/issues"
   },
-  "homepage": "https://github.com/binRick/node-chess-dot-com-bot#readme"
+  "homepage": "https://github.com/binRick/node-chess-dot-com-bot#readme",
+  "dependencies": {
+    "async": "^2.5.0",
+    "chalk": "^2.0.1",
+    "express": "^4.15.3",
+    "underscore": "^1.8.3"
+  }
 }
