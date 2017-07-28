@@ -80,10 +80,13 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
                 var engine = new Engine(config.engine);
                 engine.chain()
                     .init()
-                    .setoption('MultiPV', 3)
+                    .setoption('MultiPV', config.principalVariation)
+                    .setoption('Threads', config.Threads)
+                    .setoption('Hash', config.Hash)
                     .position('startpos', Moves)
                     .go({
-                        depth: 15
+                        depth: config.depth,
+
                     })
                     .then(function(result) {
                         res.json({});
