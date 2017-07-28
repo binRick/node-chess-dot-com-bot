@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 var async = require('async'),
+    ora = require('ora'),
+    clear = require('cli-clear'),
     robot = require("robotjs"),
     md5 = require('md5'),
     Engine = require('node-uci').Engine,
@@ -16,11 +18,11 @@ var async = require('async'),
     prompt = require('cli-prompt'),
     completedMoves = [];
 
-
+clear();
 
 robot.setMouseDelay(config.mouseMoveDelay);
 
-prompt(c.red('Which player do you want to control? Enter player name, white, or black. Default is '+config.playerName+': '), function(val) {
+prompt(c.red('Which player do you want to control? Enter player name, white, or black.\n\tDefault is '+c.white(config.playerName)+': '), function(val) {
     if (val == 'white')
         var controlledPlayer = 'white';
     else if(val=='black')
@@ -77,6 +79,7 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
                     index++;
                     Moves.push(config.decodeMove(s));
                 }
+var startedTs = Date.now();
                 var engine = new Engine(config.engine);
                 engine.chain()
                     .init()
@@ -89,12 +92,16 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
 
                     })
                     .then(function(result) {
+			    var duration = Date.now() - startedTs;
                         res.json({});
                         if (turn == controlledPlayer || playerTurn==controlledPlayer) {
-                            console.log(c.green('\tMoving mouse to perform move'), c.white(result.bestmove));
-                            var mtp = config.moveToPosition(boardConstraints, result.bestmove[0] + result.bestmove[1]);
-                            var mtp2 = config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]);
-                            robot.moveMouseSmooth(mtp.X, mtp.Y);
+			    var movePosition = {
+				    from: config.moveToPosition(boardConstraints, result.bestmove[0] + result.bestmove[1]),
+					    to: config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]),
+			    };
+					    var msg = c.green('  Best move calculated in '+c.white(duration)+'ms.  Moving mouse to perform move ' +  c.white(result.bestmove));
+				var moveSpinner = spinner = ora(msg).start();
+                            robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
                             setTimeout(function() {
                                 robot.mouseClick();
                                 setTimeout(function() {
@@ -102,10 +109,11 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
                                     setTimeout(function() {
                                         robot.mouseToggle('down');
                                         setTimeout(function() {
-                                            robot.moveMouseSmooth(mtp2.X, mtp2.Y);
+                                            robot.moveMouseSmooth(movePosition.to.X, movePosition.to.Y);
                                             setTimeout(function() {
                                                 robot.mouseToggle('up');
-                                                console.log('\t\t' + c.yellow('[Move Complete!]'));
+						moveSpinner.succeed();
+//                                                console.log('\t\t' + c.yellow('[Move Complete!]'));
                                             }, config.mouseEventDelay);
                                         }, config.mouseEventDelay);
                                     }, config.mouseEventDelay);
