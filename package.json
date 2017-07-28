@@ -18,8 +18,16 @@
   "homepage": "https://github.com/binRick/node-chess-dot-com-bot#readme",
   "dependencies": {
     "async": "^2.5.0",
+    "body-parser": "^1.17.2",
     "chalk": "^2.0.1",
+    "cli-prompt": "^0.6.0",
+    "cors": "^2.8.4",
     "express": "^4.15.3",
+    "md5": "^2.2.1",
+    "node-uci": "^1.3.0",
+    "pem": "^1.9.7",
+    "prettyjson": "^1.2.1",
+    "request-json": "^0.6.2",
     "underscore": "^1.8.3"
   }
 }
