@@ -59,6 +59,7 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
                 if (_.contains(completedMoves, moveHash)) {
                     return res.json({});
                 }
+                completedMoves.push(moveHash);
                 var index = 0;
                 var Moves = [];
                 if (gameState.seq % 2 == 0) {
@@ -102,7 +103,6 @@ prompt(c.red('Which player do you want to control? Enter player name, white, or 
                                             setTimeout(function() {
                                                 robot.mouseToggle('up');
                                                 console.log('\t\t' + c.yellow('[Move Complete!]'));
-                completedMoves.push(moveHash);
                                             }, config.mouseEventDelay);
                                         }, config.mouseEventDelay);
                                     }, config.mouseEventDelay);

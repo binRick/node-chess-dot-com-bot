@@ -2,7 +2,7 @@ var _ = require('underscore');
 
 module.exports = {
 	playerName: 'rapidrick', 
-	mouseEventDelay: 2,
+	mouseEventDelay: 10,
 	mouseMoveDelay: 10,
     port: 4912,
     engine: __dirname + '/stockfish-8-mac/Mac/stockfish-8-64',
