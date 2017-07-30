@@ -6,7 +6,7 @@ module.exports = {
     Hash: 32,
     depth: 15,
     principalVariation: 3,
-    playerName: 'rapidrick',
+    playerName: 'yourUsername',
     mouseEventDelay: 35,
     mouseMoveDelay: 30,
     port: 4912,
