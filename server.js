@@ -17,7 +17,8 @@ var async = require('async'),
     bodyParser = require('body-parser'),
     prompt = require('cli-prompt'),
     completedMoves = [];
-    matches = [];
+    games = [],
+    gameStateFile = __dirname+'/.lastGameState.json';
 
 clear();
 
@@ -58,7 +59,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
             });
             app.post('/api/', function(req, res) {
                 var gameState = req.body;
- //               console.log(c.yellow(JSON.stringify(gameState)));
+                console.log(c.yellow(JSON.stringify(gameState)));
                 var moveHash = md5(md5(gameState.moves) + md5(gameState.id));
                 if (!_.contains(games, gameState.id))
 			games.push(gameState.id);
@@ -83,6 +84,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     Moves.push(config.decodeMove(s));
                 }
 var startedTs = Date.now();
+//fs.writeFileSync(gameStateFile, JSON.stringify(gameState));
                 var engine = new Engine(config.engine);
                 engine.chain()
                     .init()
@@ -95,6 +97,7 @@ var startedTs = Date.now();
 
                     })
                     .then(function(result) {
+	//		    console.log(result);
 			    var duration = Date.now() - startedTs;
                         res.json({});
                         if (turn == controlledPlayer || playerTurn==controlledPlayer) {
@@ -105,6 +108,8 @@ var startedTs = Date.now();
 					    var msg = c.green('  Best move calculated in '+c.white(duration)+'ms.\tMoving mouse to perform move ' +  c.white(result.bestmove));
 				var moveSpinner = spinner = ora(msg).start();
                             robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
+			    var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1000;
+                            setTimeout(function() {
                             setTimeout(function() {
                                 robot.mouseClick();
                                 setTimeout(function() {
@@ -122,6 +127,7 @@ var startedTs = Date.now();
                                     }, config.mouseEventDelay);
                                 }, config.mouseEventDelay);
                             }, config.mouseEventDelay);
+			    }, moveDelay);
                         }
                     });
                 delete engine;
