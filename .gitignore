@@ -1,0 +1,7 @@
+node_modules/
+server.key
+server.csr
+server.crt
+.lastGameState.json
+ca.key
+package-lock.json
