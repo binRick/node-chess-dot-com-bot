@@ -2,6 +2,7 @@
 
 var async = require('async'),
     ora = require('ora'),
+    l = console.log,
     clear = require('cli-clear'),
     robot = require("robotjs"),
     md5 = require('md5'),
@@ -17,27 +18,27 @@ var async = require('async'),
     bodyParser = require('body-parser'),
     prompt = require('cli-prompt'),
     completedMoves = [];
-    games = [],
-    gameStateFile = __dirname+'/.lastGameState.json';
+games = [],
+    gameStateFile = __dirname + '/.lastGameState.json';
 
 clear();
 
 robot.setMouseDelay(config.mouseMoveDelay);
 
-prompt(c.green('Which player do you want to control? Enter player name, white, or black.\n\tDefault is '+c.white(config.playerName)+': '), function(val) {
+prompt(c.green('Which player do you want to control? Enter player name, white, or black.\n\tDefault is ' + c.white(config.playerName) + ': '), function(val) {
     if (val == 'white')
         var controlledPlayer = 'white';
-    else if(val=='black')
+    else if (val == 'black')
         var controlledPlayer = 'black';
-    else{
-	    if(val=='')
-		    val=config.playerName;
-	    var controlledPlayer=val;
+    else {
+        if (val == '')
+            val = config.playerName;
+        var controlledPlayer = val;
     }
     console.log(c.green('Controlling player ') + c.white(controlledPlayer));
-    prompt(c.green('Move mouse to the top left of the board and hit '+c.white('enter')), function(val) {
+    prompt(c.green('Move mouse to the top left of the board and hit ' + c.white('enter')), function(val) {
         var topLeft = robot.getMousePos();
-        prompt(c.green('Move mouse to the bottom right of the board and hit '+c.white('enter')), function(val) {
+        prompt(c.green('Move mouse to the bottom right of the board and hit ' + c.white('enter')), function(val) {
             var bottomRight = robot.getMousePos();
             var boardConstraints = {
                 topLeft: topLeft,
@@ -49,33 +50,50 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
             var app = express();
             app.use(bodyParser.json());
             app.use(cors());
+            /*
             app.use(function(req, res, next) {
                 res.header("Access-Control-Allow-Origin", "*");
                 res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
                 next();
-            });
+            });*/
             app.get('/', function(req, res) {
                 res.send('Hello World!');
             });
             app.post('/api/', function(req, res) {
+                //console.log(req.body);
+                //return res.send({asd:123});
                 var gameState = req.body;
-                console.log(c.yellow(JSON.stringify(gameState)));
-                var moveHash = md5(md5(gameState.moves) + md5(gameState.id));
+                var gameID = gameState.id,
+                    moves = gameState.moves;
+                //console.log('gamestate type', typeof gameState, gameState.id);
+                //		    if('players' in gameState){
+                //return l(c.red('players not in gameState'));
+                //		    }
+                //console.log(gameState.players);
+                var moveHash = md5(md5(JSON.stringify(gameState.moves)) + md5(JSON.stringify(gameState.id)));
+                //l(c.green(moveHash));
+
                 if (!_.contains(games, gameState.id))
-			games.push(gameState.id);
+                    games.push(gameState.id);
                 if (_.contains(completedMoves, moveHash)) {
                     return res.json({});
                 }
                 completedMoves.push(moveHash);
                 var index = 0;
                 var Moves = [];
+                //		    l(c.green('Seq: ' + gameState.seq));
                 if (gameState.seq % 2 == 0) {
                     var turn = 'white';
-                    var playerTurn = gameState.players[0].uid;
+                    var pid = 0;
                 } else {
                     var turn = 'black';
-                    var playerTurn = gameState.players[1].uid;
+                    var pid = 1;
                 }
+                var playerTurn = gameState.players[pid].uid;
+                //		    l(c.green('Turn: ' + turn));
+                //		    l(c.green('Player: '));
+                //		    l(gameState.players[pid]);
+                //
                 while (index < gameState.moves.length - 1) {
                     var s = gameState.moves[index];
                     index++;
@@ -83,9 +101,10 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     index++;
                     Moves.push(config.decodeMove(s));
                 }
-var startedTs = Date.now();
-//fs.writeFileSync(gameStateFile, JSON.stringify(gameState));
+                var startedTs = Date.now();
+                fs.writeFileSync(gameStateFile, JSON.stringify(gameState));
                 var engine = new Engine(config.engine);
+                //l(config.principalVariation, config.Threads,  config.Hash, Moves.length,' moves,', config.depth);
                 engine.chain()
                     .init()
                     .setoption('MultiPV', config.principalVariation)
@@ -97,37 +116,43 @@ var startedTs = Date.now();
 
                     })
                     .then(function(result) {
-	//		    console.log(result);
-			    var duration = Date.now() - startedTs;
-                        res.json({});
-                        if (turn == controlledPlayer || playerTurn==controlledPlayer) {
-			    var movePosition = {
-				    from: config.moveToPosition(boardConstraints, result.bestmove[0] + result.bestmove[1]),
-					    to: config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]),
-			    };
-					    var msg = c.green('  Best move calculated in '+c.white(duration)+'ms.\tMoving mouse to perform move ' +  c.white(result.bestmove));
-				var moveSpinner = spinner = ora(msg).start();
+                        //l(c.green('Response from chess engine!'));
+                        //l(pj.render(result));
+                        //		    console.log(result);
+                        var duration = Date.now() - startedTs;
+                        res.json({
+                            duration: duration,
+                            bestmove: result.bestmove
+                        });
+                        if (turn == controlledPlayer || playerTurn == controlledPlayer) {
+                            var movePosition = {
+                                from: config.moveToPosition(boardConstraints, result.bestmove[0] + result.bestmove[1]),
+                                to: config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]),
+                            };
+                            var msg = c.green('  Best move calculated in ' + c.white(duration) + 'ms.\tMoving mouse to perform move ' + c.white(result.bestmove));
+                            //l(msg);
+                            var moveSpinner = spinner = ora(msg).start();
                             robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
-			    var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1000;
+                            var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1000;
                             setTimeout(function() {
-                            setTimeout(function() {
-                                robot.mouseClick();
                                 setTimeout(function() {
                                     robot.mouseClick();
                                     setTimeout(function() {
-                                        robot.mouseToggle('down');
+                                        robot.mouseClick();
                                         setTimeout(function() {
-                                            robot.moveMouseSmooth(movePosition.to.X, movePosition.to.Y);
+                                            robot.mouseToggle('down');
                                             setTimeout(function() {
-                                                robot.mouseToggle('up');
-						moveSpinner.succeed();
-//                                                console.log('\t\t' + c.yellow('[Move Complete!]'));
+                                                robot.moveMouseSmooth(movePosition.to.X, movePosition.to.Y);
+                                                setTimeout(function() {
+                                                    robot.mouseToggle('up');
+                                                    moveSpinner.succeed();
+                                                    //                                                console.log('\t\t' + c.yellow('[Move Complete!]'));
+                                                }, config.mouseEventDelay);
                                             }, config.mouseEventDelay);
                                         }, config.mouseEventDelay);
                                     }, config.mouseEventDelay);
                                 }, config.mouseEventDelay);
-                            }, config.mouseEventDelay);
-			    }, moveDelay);
+                            }, moveDelay);
                         }
                     });
                 delete engine;
