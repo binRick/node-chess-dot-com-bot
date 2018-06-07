@@ -17,8 +17,8 @@ var async = require('async'),
     cors = require('cors'),
     bodyParser = require('body-parser'),
     prompt = require('cli-prompt'),
-    completedMoves = [];
-games = [],
+    completedMoves = [],
+    games = [],
     gameStateFile = __dirname + '/.lastGameState.json';
 
 clear();
