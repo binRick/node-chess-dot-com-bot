@@ -5,3 +5,4 @@ server.crt
 .lastGameState.json
 ca.key
 package-lock.json
+npm-debug.log
