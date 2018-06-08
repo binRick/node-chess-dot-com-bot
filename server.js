@@ -49,7 +49,12 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
         else
             var topLeft = cachedBoardLocations.topLeft;
 
-        prompt(c.green('Hit enter to use previous location (' + c.white(JSON.stringify(cachedBoardLocations.bottomRight)) + ') -or- Move mouse to the bottom right of the board and hit ' + c.white('enter')), function(bottomRight) {
+        prompt(c.green('Hit enter to use previous newGameButton (' + c.white(JSON.stringify(cachedBoardLocations.newGameButton)) + ') -or- Move mouse to the new game button location and hit ' + c.white('y')), function(newGameButton) {
+            if (newGameButton == 'y')
+                var newGameButton = robot.getMousePos();
+            else
+                var newGameButton = cachedBoardLocations.newGameButton;
+        prompt(c.green('Hit enter to use previous location (' + c.white(JSON.stringify(cachedBoardLocations.bottomRight)) + ') -or- Move mouse to the bottom right of the board and hit ' + c.white('y')), function(bottomRight) {
             if (bottomRight == 'y')
                 var bottomRight = robot.getMousePos();
             else
@@ -57,6 +62,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
             var boardLocations = {
                 topLeft: topLeft,
                 bottomRight: bottomRight,
+                newGameButton: newGameButton,
             };
             fs.writeFileSync(cachedBoardLocationsFile, JSON.stringify(boardLocations));
             var boardConstraints = {
@@ -78,11 +84,25 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
             app.get('/', function(req, res) {
                 res.send('Hello World!');
             });
+            app.post('/newGame', function(req, res) {
+                //console.log(req.body);
+		    l('Clicking new game @ ' + JSON.stringify(newGameButton));
+
+                    //        robot.moveMouseSmooth(newGameButton.X, newGameButton.Y);
+                      //              robot.mouseClick();
+
+
+	    });
             app.post('/api/', function(req, res) {
                 //console.log(req.body);
                 var gameState = req.body;
                 var gameID = gameState.id,
                     moves = gameState.moves;
+
+		    l('# Moves: ' + (gameState.moves.length % 2 ));
+		    l('Initial Manual Moves: ' + config.initialManualMoves);
+
+
                 var moveHash = md5(md5(JSON.stringify(gameState.moves)) + md5(JSON.stringify(gameState.id)));
 
                 if (!_.contains(games, gameState.id))
@@ -118,6 +138,9 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     .setoption('MultiPV', config.principalVariation)
                     .setoption('Threads', config.Threads)
                     .setoption('Hash', config.Hash)
+                    .setoption('Skill', config.Skill)
+                    .setoption('Hash', config.Hash)
+                    .setoption('Ponder', config.Ponder)
                     .position('startpos', Moves)
                     .go({
                         depth: config.depth,
@@ -125,6 +148,9 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     })
                     .then(function(result) {
                         var duration = Date.now() - startedTs;
+			    if(result.bestmove.length==5){
+result.bestmove = result.bestmove[0]+result.bestmove[1]+result.bestmove[2]+result.bestmove[3];
+			    }
                         res.json({
                             duration: duration,
                             bestmove: result.bestmove
@@ -135,7 +161,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                                 to: config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]),
                             };
                             var msg = c.green('  Best move calculated in ' + c.white(duration) + 'ms.\tMoving mouse to perform move ' + c.white(result.bestmove));
-                            l(msg);
                             var moveSpinner = spinner = ora(msg).start();
                             robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
                             var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1;
@@ -157,7 +182,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                                         }, config.mouseEventDelay);
                                     }, config.mouseEventDelay);
                                 }, config.mouseEventDelay);
-                            }, moveDelay);
+                            }, moveDelay + config.moveDelay(result));
                         }
                     });
                 delete engine;
@@ -169,5 +194,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                 console.log('API Server Started On Port %d', config.port);
             });
         });
+    });
     });
 });

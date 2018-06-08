@@ -15,8 +15,16 @@ module.exports = {
             if (responseDetail.response.body.includes('[{"data":{"game":{"id"')) {
                 console.log('received response for chess.com', typeof responseDetail, 'sending to', uri);
                 var dat = JSON.parse(responseDetail.response.body.toString());
+
                 l(typeof dat);
                 dat = dat[0].data.game;
+		    if(dat.status == 'finished' && dat.seq > config.initialManualMoves){
+l('GAME IS FINISHED');
+			    if(config.autoClickNewGame){
+				    uri = 'https://localhost:' + config.port + '/newGame';
+l('Clicking new Game Button @ '  + uri);
+			    }
+		    }
                 l(pj.render(dat));
                 var options = {
                     uri: uri,
