@@ -133,7 +133,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                             //l(msg);
                             var moveSpinner = spinner = ora(msg).start();
                             robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
-                            var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1000;
+                            var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1;
                             setTimeout(function() {
                                 setTimeout(function() {
                                     robot.mouseClick();
