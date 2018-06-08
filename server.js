@@ -84,7 +84,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                 var gameID = gameState.id,
                     moves = gameState.moves;
                 var moveHash = md5(md5(JSON.stringify(gameState.moves)) + md5(JSON.stringify(gameState.id)));
-                //l(c.green(moveHash));
 
                 if (!_.contains(games, gameState.id))
                     games.push(gameState.id);
@@ -102,9 +101,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     var pid = 1;
                 }
                 var playerTurn = gameState.players[pid].uid;
-                l(c.green('Turn: ' + turn));
-                l(c.green('Player: '));
-                l(gameState.players[pid]);
 
                 while (index < gameState.moves.length - 1) {
                     var s = gameState.moves[index];
