@@ -20,6 +20,7 @@ var async = require('async'),
     completedMoves = [],
     games = [],
     cachedBoardLocationsFile = __dirname + '/.boardLocations.json';
+
 try {
     var cachedBoardLocations = JSON.parse(fs.readFileSync(cachedBoardLocationsFile).toString());
 } catch (e) {
@@ -155,7 +156,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                                                     robot.mouseToggle('up');
                                                     moveSpinner.succeed();
                                                     //                                                console.log('\t\t' + c.yellow('[Move Complete!]'));
-                                                }, config.mouseEventDelay);
+                                                }, config.mouseDelays.beforeMouseRelease);
                                             }, config.mouseEventDelay);
                                         }, config.mouseEventDelay);
                                     }, config.mouseEventDelay);

@@ -17,6 +17,9 @@ module.exports = {
 //The minimum amount of time to analyze, in milliseconds.
 	Ponder: true, //Whether or not the engine should analyze when it is the opponent's turn.
     depth: 8,
+	mouseDelays: {
+		beforeMouseRelease: 100, //wait 100ms before releasing mouse
+	},
     principalVariation: 2,
     mouseEventDelay: 1,
     mouseMoveDelay: 1,
