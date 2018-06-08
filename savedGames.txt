@@ -4,3 +4,6 @@ tried to promote e7 pawn but lost on time because the promoted piece failed to g
 promoted to queen and delivered checkmate
 .lastGameState_1528435842509.json
 
+
+promoted to queen and played a few moves
+.lastGameState_1528437416248.json
