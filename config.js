@@ -2,7 +2,8 @@ var _ = require('underscore'),
     os = require('os');
 
 module.exports = {
-	MultiPV 1, //Min: 1, Max: 500
+    playerName: 'chessbenzell',
+	MultiPV: 1, //Min: 1, Max: 500
 //The number of alternate lines of analysis to display. Specify 1 to just get the best line. Asking for more lines slows down the search.
     Threads: os.cpus.length-1, //Min: 1, Max: 128
 //The number of threads to use during the search. This number should be set to the number of cores in your CPU.
@@ -17,7 +18,6 @@ module.exports = {
 	Ponder: true, //Whether or not the engine should analyze when it is the opponent's turn.
     depth: 8,
     principalVariation: 2,
-    playerName: 'chessbenzell',
     mouseEventDelay: 1,
     mouseMoveDelay: 1,
     port: 4912,
