@@ -6,3 +6,4 @@ server.crt
 ca.key
 package-lock.json
 npm-debug.log
+.lastGameState_*.json
