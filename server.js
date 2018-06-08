@@ -98,10 +98,12 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                 var gameState = req.body;
                 var gameID = gameState.id,
                     moves = gameState.moves;
-
-		    l('# Moves: ' + (gameState.moves.length % 2 ));
+var initialMovesMode = (parseInt(gameState.moves.length / 2) <= config.initialManualMoves);
+		    l('# Moves: ' + gameState.moves ,gameState.moves.length);
 		    l('Initial Manual Moves: ' + config.initialManualMoves);
-
+if(initialMovesMode){
+l('In initial moves mode...');
+}
 
                 var moveHash = md5(md5(JSON.stringify(gameState.moves)) + md5(JSON.stringify(gameState.id)));
 

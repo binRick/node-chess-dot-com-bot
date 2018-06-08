@@ -3,6 +3,7 @@ var _ = require('underscore'),
 
 module.exports = {
     playerName: 'chessbenzell',
+	queenSack: true,
 	initialManualMoves: 4,
     autoClickNewGame: true,
     moveDelay: function(game) {
@@ -12,15 +13,15 @@ module.exports = {
 
         var twentyPercentChance = (Math.floor(Math.random() * (100 - 0 + 1) + 0) > 20);
         if (twentyPercentChance) {
-            console.log('Running 20% Chance Delay. Adding .2-.6 sec delay..');
-            ms = ms + Math.floor(Math.random() * (600 - 200 + 1) + 200);
+            console.log('Running 20% Chance Delay. Adding .4-.1 sec delay..');
+            ms = ms + Math.floor(Math.random() * (400 - 100 + 1) + 100);
         }
 
         return ms + Math.floor(Math.random() * (max - min + 1) + min);
     },
     moveDelayRangePercentages: {
         min: 0,
-        max: 145
+        max: 125
     },
     MultiPV: 1, //Min: 1, Max: 500
     //The number of alternate lines of analysis to display. Specify 1 to just get the best line. Asking for more lines slows down the search.
@@ -28,7 +29,7 @@ module.exports = {
     //The number of threads to use during the search. This number should be set to the number of cores in your CPU.
     Hash: 16, //Min: 1, Max: 1048576
     //The amount of memory to use for the hash during search, specified in MB (megabytes). This number should be smaller than the amount of physical memory for your system.
-  Skill:20, //Min: 0, Max: 20
+  Skill:8, //Min: 0, Max: 20
     //How well you want Stockfish to play. At level 0, Stockfish will make dumb moves. Level 20 is best/strongest play.
     //
     //Min: 0, Max: 5000
@@ -36,7 +37,7 @@ module.exports = {
     Ponder: true, //Whether or not the engine should analyze when it is the opponent's turn.
     depth: 6,
     mouseDelays: {
-        beforeMouseRelease: 120, //delay before releasing mouse button (completing move)
+        beforeMouseRelease: 50, //delay before releasing mouse button (completing move)
     },
     principalVariation: 2,
     mouseEventDelay: 10,

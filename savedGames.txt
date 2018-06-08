@@ -1,5 +1,6 @@
 tried to promote e7 pawn but lost on time because the promoted piece failed to get selected
 .lastGameState_1528435310995.json
 
-
+promoted to queen and delivered checkmate
+.lastGameState_1528435842509.json
 
