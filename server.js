@@ -19,7 +19,12 @@ var async = require('async'),
     prompt = require('cli-prompt'),
     completedMoves = [],
     games = [],
-    gameStateFile = __dirname + '/.lastGameState.json';
+    cachedBoardLocationsFile = __dirname + '/.boardLocations.json';
+try {
+    var cachedBoardLocations = JSON.parse(fs.readFileSync(cachedBoardLocationsFile).toString());
+} catch (e) {
+    var cachedBoardLocations = {};
+};
 
 clear();
 
@@ -36,10 +41,23 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
         var controlledPlayer = val;
     }
     console.log(c.green('Controlling player ') + c.white(controlledPlayer));
-    prompt(c.green('Move mouse to the top left of the board and hit ' + c.white('enter')), function(val) {
-        var topLeft = robot.getMousePos();
-        prompt(c.green('Move mouse to the bottom right of the board and hit ' + c.white('enter')), function(val) {
-            var bottomRight = robot.getMousePos();
+
+    prompt(c.green('Hit enter to use previous location (' + c.white(JSON.stringify(cachedBoardLocations.topLeft)) + ') -or- Move mouse to the top left of the board and hit ' + c.white('y')), function(topLeft) {
+        if (topLeft == 'y')
+            var topLeft = robot.getMousePos();
+        else
+            var topLeft = cachedBoardLocations.topLeft;
+
+        prompt(c.green('Hit enter to use previous location (' + c.white(JSON.stringify(cachedBoardLocations.bottomRight)) + ') -or- Move mouse to the bottom right of the board and hit ' + c.white('enter')), function(bottomRight) {
+            if (bottomRight == 'y')
+                var bottomRight = robot.getMousePos();
+            else
+                var bottomRight = cachedBoardLocations.bottomRight;
+            var boardLocations = {
+                topLeft: topLeft,
+                bottomRight: bottomRight,
+            };
+            fs.writeFileSync(cachedBoardLocationsFile, JSON.stringify(boardLocations));
             var boardConstraints = {
                 topLeft: topLeft,
                 bottomRight: bottomRight,
@@ -61,15 +79,9 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
             });
             app.post('/api/', function(req, res) {
                 //console.log(req.body);
-                //return res.send({asd:123});
                 var gameState = req.body;
                 var gameID = gameState.id,
                     moves = gameState.moves;
-                //console.log('gamestate type', typeof gameState, gameState.id);
-                //		    if('players' in gameState){
-                //return l(c.red('players not in gameState'));
-                //		    }
-                //console.log(gameState.players);
                 var moveHash = md5(md5(JSON.stringify(gameState.moves)) + md5(JSON.stringify(gameState.id)));
                 //l(c.green(moveHash));
 
@@ -81,7 +93,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                 completedMoves.push(moveHash);
                 var index = 0;
                 var Moves = [];
-                //		    l(c.green('Seq: ' + gameState.seq));
                 if (gameState.seq % 2 == 0) {
                     var turn = 'white';
                     var pid = 0;
@@ -90,10 +101,10 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     var pid = 1;
                 }
                 var playerTurn = gameState.players[pid].uid;
-                //		    l(c.green('Turn: ' + turn));
-                //		    l(c.green('Player: '));
-                //		    l(gameState.players[pid]);
-                //
+                l(c.green('Turn: ' + turn));
+                l(c.green('Player: '));
+                l(gameState.players[pid]);
+
                 while (index < gameState.moves.length - 1) {
                     var s = gameState.moves[index];
                     index++;
@@ -101,10 +112,10 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                     index++;
                     Moves.push(config.decodeMove(s));
                 }
-                var startedTs = Date.now();
+                var startedTs = Date.now(),
+                    gameStateFile = __dirname + '/.lastGameState_' + startedTs + '.json';
                 fs.writeFileSync(gameStateFile, JSON.stringify(gameState));
                 var engine = new Engine(config.engine);
-                //l(config.principalVariation, config.Threads,  config.Hash, Moves.length,' moves,', config.depth);
                 engine.chain()
                     .init()
                     .setoption('MultiPV', config.principalVariation)
@@ -116,9 +127,6 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
 
                     })
                     .then(function(result) {
-                        //l(c.green('Response from chess engine!'));
-                        //l(pj.render(result));
-                        //		    console.log(result);
                         var duration = Date.now() - startedTs;
                         res.json({
                             duration: duration,
@@ -130,7 +138,7 @@ prompt(c.green('Which player do you want to control? Enter player name, white, o
                                 to: config.moveToPosition(boardConstraints, result.bestmove[2] + result.bestmove[3]),
                             };
                             var msg = c.green('  Best move calculated in ' + c.white(duration) + 'ms.\tMoving mouse to perform move ' + c.white(result.bestmove));
-                            //l(msg);
+                            l(msg);
                             var moveSpinner = spinner = ora(msg).start();
                             robot.moveMouseSmooth(movePosition.from.X, movePosition.from.Y);
                             var moveDelay = (Math.floor(Math.random() * 2) + 0) * 1;
