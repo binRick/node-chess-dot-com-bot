@@ -18,13 +18,14 @@ module.exports = {
 
                 l(typeof dat);
                 dat = dat[0].data.game;
+		    /*
 		    if(dat.status == 'finished' && dat.seq > config.initialManualMoves){
 l('GAME IS FINISHED');
 			    if(config.autoClickNewGame){
 				    uri = 'https://localhost:' + config.port + '/newGame';
 l('Clicking new Game Button @ '  + uri);
 			    }
-		    }
+		    }*/
                 l(pj.render(dat));
                 var options = {
                     uri: uri,
