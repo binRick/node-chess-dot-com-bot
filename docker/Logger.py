@@ -40,7 +40,10 @@ class ReliableChess:
             # 1. Sync Board State (Full Game Sync/Reset)
             if "fullLog" in data or "fen" in data:
                 new_fen = data.get("fen", chess.STARTING_FEN)
-                self.board = chess.Board(new_fen if ' ' in new_fen else f"{new_fen} w KQkq - 0 1")
+                # Ensure the FEN has 6 fields for python-chess
+                if new_fen.count(' ') < 5:
+                    new_fen = f"{new_fen} w KQkq - 0 1"
+                self.board = chess.Board(new_fen)
                 self.last_move_id = None
                 self.write(self.fen_log, f"[{ts}] --- SYNC: {self.board.fen()}")
                 return
@@ -53,6 +56,7 @@ class ReliableChess:
             elif "moves" in data and isinstance(data["moves"], list) and data["moves"]:
                 move_count = len(data["moves"])
                 last_item = data["moves"][-1]
+                # Handles both ["TCN", timestamp] and "TCN"
                 tcn = last_item if isinstance(last_item, str) else last_item[0]
 
             # 3. Deduplicate and Process
@@ -77,8 +81,7 @@ class ReliableChess:
                     status = "OK"
                     self.last_move_id = current_id
                 else:
-                    # Silence duplicate confirms, but catch actual sync issues
-                    return 
+                    return # Skip redundant server confirmation packets
 
                 # 5. Final Output
                 res = f"[{ts}] {side:3} | {move.uci():7} | {status:5} | FEN: {self.board.fen()}"
