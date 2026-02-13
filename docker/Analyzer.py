@@ -3,46 +3,50 @@ import os
 import chess
 import chess.engine
 
+# Corrected paths for the container environment
 LOG_FILE = "/app/logs/game_state.log"
 BEST_MOVE_LOG = "/app/logs/best_moves.log"
-STOCKFISH_PATH = "/app/engine/stockfish"
+ENGINE_PATH = "/usr/games/stockfish"
 
 def get_best_move(fen):
     try:
-        # Initialize engine connection
-        engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
-        board = chess.Board(fen)
-        # Analyze for a short burst (0.1s)
-        result = engine.play(board, chess.engine.Limit(time=0.1))
-        engine.quit()
-        return result.move.uci()
+        # Use context manager to handle engine lifecycle
+        with chess.engine.SimpleEngine.popen_uci(ENGINE_PATH) as engine:
+            board = chess.Board(fen)
+            # 0.1s is sufficient for strong tactical suggestions
+            result = engine.play(board, chess.engine.Limit(time=0.1))
+            return result.move.uci()
     except Exception as e:
         return f"Error: {e}"
 
-def watch_logs():
-    print("Analyzer started. Watching for FEN updates...")
-    # Open the file and move to the end
+def watch():
+    print("Analyzer is watching game_state.log...", flush=True)
+    # Wait for the log file to be created
+    while not os.path.exists(LOG_FILE):
+        time.sleep(1)
+
     with open(LOG_FILE, "r") as f:
+        # Move to the end of the file so we only analyze new moves
         f.seek(0, os.SEEK_END)
         while True:
             line = f.readline()
             if not line:
-                time.sleep(0.5) # Wait for new data
+                time.sleep(0.2)
                 continue
             
-            # Detect lines containing FENs from your Logger.py
             if "FEN:" in line:
-                fen = line.split("FEN: ")[1].strip()
-                best_move = get_best_move(fen)
-                
-                output = f"{time.strftime('%H:%M:%S')} | FEN: {fen} | Best Move: {best_move}"
-                with open(BEST_MOVE_LOG, "a") as out:
-                    out.write(output + "\n")
-                print(f"Analysis: {best_move}")
+                parts = line.split("FEN: ")
+                if len(parts) > 1:
+                    fen = parts[1].strip()
+                    best_move = get_best_move(fen)
+                    
+                    ts = time.strftime('%H:%M:%S')
+                    log_entry = f"{ts} | Best: {best_move} | FEN: {fen}"
+                    
+                    with open(BEST_MOVE_LOG, "a") as out:
+                        out.write(log_entry + "\n")
+                    print(f"!!! {log_entry}", flush=True)
 
 if __name__ == "__main__":
-    # Wait for the log file to be created by the other container
-    while not os.path.exists(LOG_FILE):
-        time.sleep(1)
-    watch_logs()
+    watch()
 
