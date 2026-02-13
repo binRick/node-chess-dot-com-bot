@@ -4,7 +4,7 @@ import os
 import chess
 from mitmproxy import http
 
-# The Verified Modern Chess.com TCN Map
+# The Verified Modern Chess.com TCN Map (Base64-style indices)
 TCN_MAP = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?"
 
 class ReliableChess:
@@ -37,7 +37,7 @@ class ReliableChess:
             content = payload[start_idx:].decode("utf-8", "ignore")
             data = json.loads(content)
 
-            # 1. Sync Board State (Full Game Sync)
+            # 1. Sync Board State (Full Game Sync/Reset)
             if "fullLog" in data or "fen" in data:
                 new_fen = data.get("fen", chess.STARTING_FEN)
                 self.board = chess.Board(new_fen if ' ' in new_fen else f"{new_fen} w KQkq - 0 1")
@@ -45,7 +45,7 @@ class ReliableChess:
                 self.write(self.fen_log, f"[{ts}] --- SYNC: {self.board.fen()}")
                 return
 
-            # 2. Extract Move
+            # 2. Extract TCN Move from RSocket Packet
             tcn = None
             move_count = 0
             if "move" in data:
@@ -53,15 +53,17 @@ class ReliableChess:
             elif "moves" in data and isinstance(data["moves"], list) and data["moves"]:
                 move_count = len(data["moves"])
                 last_item = data["moves"][-1]
-                tcn = last_item[0] if isinstance(last_item, list) else last_item
+                tcn = last_item if isinstance(last_item, str) else last_item[0]
 
-            # 3. Deduplicate and Turn-Check
+            # 3. Deduplicate and Process
             current_id = f"{tcn}_{move_count}"
             if isinstance(tcn, str) and len(tcn) >= 2 and current_id != self.last_move_id:
                 
-                from_sq = TCN_MAP.index(tcn[0])
-                to_sq = TCN_MAP.index(tcn[1])
-                
+                try:
+                    from_sq = TCN_MAP.index(tcn[0])
+                    to_sq = TCN_MAP.index(tcn[1])
+                except (ValueError, IndexError): return
+
                 promo = None
                 if len(tcn) > 2:
                     promo_map = {'q': chess.QUEEN, 'r': chess.ROOK, 'b': chess.BISHOP, 'n': chess.KNIGHT}
@@ -69,18 +71,16 @@ class ReliableChess:
 
                 move = chess.Move(from_sq, to_sq, promotion=promo)
 
-                # Only apply the move if it's the correct turn to prevent double-move errors
-                is_white_move = (side == "YOU") # Adjust this logic if you play as Black
-                
+                # 4. Update Board State
                 if move in self.board.legal_moves:
                     self.board.push(move)
                     status = "OK"
                     self.last_move_id = current_id
                 else:
-                    # If it's already been moved (double packet), skip SYNC log
+                    # Silence duplicate confirms, but catch actual sync issues
                     return 
 
-                # 4. Final Output
+                # 5. Final Output
                 res = f"[{ts}] {side:3} | {move.uci():7} | {status:5} | FEN: {self.board.fen()}"
                 self.write(self.fen_log, res)
                 self.write(self.raw_log, f"[{ts}] {side} | TCN: {tcn} | JSON: {content}")
