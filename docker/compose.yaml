@@ -1,18 +1,28 @@
 services:
   mitmproxy:
-    #image: mitmproxy/mitmproxy
-    build: .
-
+    build:
+      context: .
+      dockerfile: mitmproxy.Dockerfile
     volumes:
       - .:/home/mitmproxy/scripts
       - ./logs:/home/mitmproxy/logs
       - ./certs:/home/mitmproxy/.mitmproxy
     ports:
-      - "8080:8080" # HTTP/TLS Proxy
-      - "8081:8081" # Web UI (optional)
+      - "8080:8080"
+      - "8081:8081"
     command: >
-      sh -c "pip install python-chess && 
       mitmdump -s /home/mitmproxy/scripts/Logger.py
       --set block_global=false
       --set confdir=/home/mitmproxy/.mitmproxy
-      --set stream_websockets=true"
+      --set stream_websockets=true
+
+  analyzer:
+    build:
+      context: .
+      dockerfile: analyzer.Dockerfile
+    volumes:
+      - ./logs:/app/logs
+      - ./Analyzer.py:/app/Analyzer.py
+    depends_on:
+      - mitmproxy
+
