@@ -4,82 +4,104 @@ import os
 import chess
 from mitmproxy import http
 
-# The Verified Chess.com TCN map: '(' is index 0 (a1), 'h' is index 63 (h8)
-TCN_MAP = "() *+,-./0123456789:;<=>?@ABCDEFGH IJKLMNOPQRSTUVWXYZ[\]^_`abcdefgh"
+# The Verified Modern Chess.com TCN Map
+# Square 0 (a1) = 'a' ... Square 63 (h8) = '?'
+TCN_MAP = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?"
 
 class ReliableChess:
     def __init__(self):
         self.board = chess.Board()
         self.log_dir = "/home/mitmproxy/logs"
-        self.raw_log = os.path.join(self.log_dir, "raw_moves.log")
-        self.bin_log = os.path.join(self.log_dir, "binary_moves.log")
+        self.last_move_id = None
+        self.ensure_dir()
         self.fen_log = os.path.join(self.log_dir, "game_state.log")
+        self.raw_log = os.path.join(self.log_dir, "raw_moves.log")
+
+    def ensure_dir(self):
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir, exist_ok=True)
 
     def write(self, path, data):
         try:
             with open(path, "a") as f:
                 f.write(f"{data}\n")
-        except Exception:
-            pass
+        except: pass
 
     def handle_msg(self, payload, side):
-        # Skip small keep-alive frames (all zeros or short)
         if len(payload) <= 15: return
-
         ts = datetime.datetime.now().strftime("%H:%M:%S")
+
         try:
-            content = payload.decode("utf-8", "ignore")
-            json_start = content.find('{')
-            if json_start == -1: return
+            start_idx = payload.find(b'{')
+            if start_idx == -1: return
             
-            # LOG 1: RAW JSON (The "Firehose")
-            json_str = content[json_start:]
-            data = json.loads(json_str)
+            content = payload[start_idx:].decode("utf-8", "ignore")
+            data = json.loads(content)
 
-            # Auto-Reset board if a new game setup is detected
+            # 1. Reset Board / FEN Sync
             if "fullLog" in data or "fen" in data:
-                self.board = chess.Board(data.get("fen", chess.STARTING_FEN))
-                self.write(self.fen_log, f"--- BOARD RESET (New Game/Sync) ---")
+                new_fen = data.get("fen", chess.STARTING_FEN)
+                self.board = chess.Board(new_fen if ' ' in new_fen else f"{new_fen} w KQkq - 0 1")
+                self.last_move_id = None
+                self.write(self.fen_log, f"[{ts}] --- RESET: {self.board.fen()}")
+                return
 
+            # 2. Extract TCN Move
             tcn = None
-            # Detect the latest move code
+            move_count = 0
             if "move" in data:
                 tcn = data["move"]
-            elif "moves" in data and isinstance(data["moves"], list):
+            elif "moves" in data and isinstance(data["moves"], list) and data["moves"]:
+                move_count = len(data["moves"])
                 last_item = data["moves"][-1]
-                tcn = last_item if isinstance(last_item, str) else last_item[0]
+                tcn = last_item[0] if isinstance(last_item, list) else last_item
 
-            if tcn:
-                # LOG 2: RAW HEX (Just the binary move frame)
-                self.write(self.bin_log, f"[{ts}] {side} | TCN: {tcn} | HEX: {payload.hex(' ')}")
+            # 3. Deduplicate and Process
+            current_id = f"{tcn}_{move_count}"
+            if isinstance(tcn, str) and len(tcn) >= 2 and current_id != self.last_move_id:
+                self.last_move_id = current_id
                 
-                # LOG 3: RAW JSON
-                self.write(self.raw_log, f"[{ts}] {side} | {json_str}")
-
-                # Convert TCN to UCI (e.g., 'ge' -> 'e2e4')
-                from_idx = TCN_MAP.index(tcn[0])
-                to_idx = TCN_MAP.index(tcn[1])
-                move = chess.Move(from_idx, to_idx)
-
-                # UPDATE BOARD (Force pieces to move even if illegal to maintain sync)
                 try:
+                    from_sq = TCN_MAP.index(tcn[0])
+                    to_sq = TCN_MAP.index(tcn[1])
+                except (ValueError, IndexError): return
+
+                promo = None
+                if len(tcn) > 2:
+                    promo_map = {'q': chess.QUEEN, 'r': chess.ROOK, 'b': chess.BISHOP, 'n': chess.KNIGHT}
+                    promo = promo_map.get(tcn[2].lower())
+
+                move = chess.Move(from_sq, to_sq, promotion=promo)
+
+                # 4. Update Board State
+                move_uci = move.uci()
+                if move in self.board.legal_moves:
                     self.board.push(move)
-                except:
-                    piece = self.board.piece_at(from_idx) or chess.Piece(chess.PAWN, self.board.turn)
-                    self.board.remove_piece_at(from_idx)
-                    self.board.set_piece_at(to_idx, piece)
-                
-                # LOG 4: DECODED FEN
-                res = f"[{ts}] {side:3} | {move.uci():4} | FEN: {self.board.fen()}"
+                    status = "OK"
+                else:
+                    # Manual sync for illegal-looking moves (due to dropped packets)
+                    piece = self.board.piece_at(from_sq) or chess.Piece(chess.PAWN, self.board.turn)
+                    self.board.remove_piece_at(from_sq)
+                    self.board.set_piece_at(to_sq, piece)
+                    self.board.turn = not self.board.turn
+                    status = "SYNC"
+
+                # 5. Output
+                res = f"[{ts}] {side:3} | {move_uci:7} | {status:5} | FEN: {self.board.fen()}"
                 self.write(self.fen_log, res)
+                self.write(self.raw_log, f"[{ts}] {side} | TCN: {tcn} | JSON: {content}")
                 print(f"!!! {res}", flush=True)
 
-        except Exception: pass
+        except Exception as e:
+            if "substring not found" not in str(e):
+                self.write(self.fen_log, f"[{ts}] ERROR: {str(e)}")
 
 monitor = ReliableChess()
 
 def websocket_message(flow: http.HTTPFlow):
-    if "rsocket" in flow.request.path or "service/play" in flow.request.path:
+    path = flow.request.path.lower()
+    if any(k in path for k in ["rsocket", "service/play"]):
         msg = flow.websocket.messages[-1]
-        monitor.handle_msg(msg.content, "YOU" if msg.from_client else "SRV")
+        side = "YOU" if msg.from_client else "SRV"
+        monitor.handle_msg(msg.content, side)
 
