@@ -4,9 +4,9 @@ RUN apt-get update && \
     apt-get install -y stockfish && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir python-chess
+# Add websockets here
+RUN pip install --no-cache-dir python-chess websockets
 
 WORKDIR /app
-# Removed COPY Analyzer.py .
 CMD ["python", "Analyzer.py"]
 

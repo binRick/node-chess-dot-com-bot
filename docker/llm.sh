@@ -4,11 +4,11 @@ set -eou pipefail
 echo -e "Here is my compose.yaml:"
 cat compose.yaml
 echo -e "-----------\n"
-echo -e "Here is my Analyzer.py:"
-cat Analyzer.py
+#echo -e "Here is my Analyzer.py:"
+#cat Analyzer.py
 echo -e "-----------\n"
-echo -e "Here is my Logger.py:"
-cat Logger.py
+#echo -e "Here is my Logger.py:"
+#cat Logger.py
 echo -e "-----------\n"
 echo -e "Here is my analyzer.Dockerfile:"
 cat analyzer.Dockerfile

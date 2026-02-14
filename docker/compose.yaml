@@ -25,4 +25,5 @@ services:
       - ./Analyzer.py:/app/Analyzer.py
     depends_on:
       - mitmproxy
-
+    ports:
+      - "8001:8001" 
